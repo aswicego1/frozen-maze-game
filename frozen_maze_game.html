@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frozen Maze Adventure</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0a1c33;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #fff;
+    }
+
+    .container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Full-bleed aurora sky behind everything */
+    .sky-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background:
+            radial-gradient(ellipse 80% 50% at 50% 0%, rgba(70,220,180,0.20), transparent 60%),
+            radial-gradient(ellipse 60% 40% at 20% 10%, rgba(120,160,255,0.18), transparent 60%),
+            linear-gradient(180deg, #0c1f3d 0%, #163a63 45%, #2c5d8c 75%, #4d86b3 100%);
+    }
+    .aurora-band {
+        position: fixed;
+        top: -10%; left: -10%; width: 120%; height: 60%;
+        background: linear-gradient(120deg, transparent 10%, rgba(90,240,190,0.12) 30%, rgba(120,180,255,0.14) 50%, transparent 70%);
+        filter: blur(8px);
+        z-index: 0;
+        animation: auroraShift 10s ease-in-out infinite alternate;
+        pointer-events: none;
+    }
+    @keyframes auroraShift {
+        0% { transform: translateX(-3%) scaleY(1); opacity: 0.6; }
+        100% { transform: translateX(3%) scaleY(1.08); opacity: 1; }
+    }
+
+    /* ---------- Start Screen ---------- */
+    #startScreen {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: clamp(18px, 3vh, 32px);
+        z-index: 2;
+        padding: 20px;
+    }
+
+    .title {
+        font-size: clamp(38px, 7vw, 72px);
+        font-weight: 800;
+        letter-spacing: 2px;
+        background: linear-gradient(180deg, #ffffff 0%, #cdeeff 60%, #8fd2ff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 25px rgba(140, 220, 255, 0.6);
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+    }
+
+    .subtitle {
+        font-size: clamp(15px, 2.2vw, 22px);
+        color: #bfe7ff;
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+        letter-spacing: 0.5px;
+    }
+
+    .character-select {
+        display: flex;
+        gap: clamp(20px, 4vw, 44px);
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .character-btn {
+        background: linear-gradient(160deg, rgba(255,255,255,0.14), rgba(70,130,180,0.4));
+        border: 3px solid rgba(220, 245, 255, 0.7);
+        padding: 18px 30px 22px;
+        border-radius: 20px;
+        font-size: clamp(16px, 2vw, 20px);
+        font-weight: 700;
+        color: #eaf7ff;
+        cursor: pointer;
+        transition: all 0.25s;
+        box-shadow: 0 0 28px rgba(135, 206, 235, 0.3), inset 0 0 22px rgba(255,255,255,0.1);
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+    }
+
+    .character-btn:hover {
+        transform: translateY(-4px) scale(1.05);
+        box-shadow: 0 0 40px rgba(135, 206, 235, 0.6), inset 0 0 28px rgba(255,255,255,0.18);
+        border-color: #fff;
+    }
+
+    .character-portrait {
+        width: clamp(90px, 13vw, 140px);
+        height: clamp(90px, 13vw, 140px);
+        margin-bottom: 10px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #3c7aa8, #173d5e);
+        box-shadow: 0 0 22px rgba(150, 220, 255, 0.55), inset 0 0 12px rgba(0,0,0,0.3);
+    }
+
+    /* ---------- Game Screen ---------- */
+    #gameScreen {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        padding: 8px;
+    }
+
+    .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        max-width: 1400px;
+        color: #eaf7ff;
+        font-size: clamp(16px, 2vw, 24px);
+        font-weight: 800;
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+        padding: 0 14px;
+        flex: 0 0 auto;
+    }
+
+    .game-canvas-frame {
+        position: relative;
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 0;
+    }
+
+    .game-canvas-container {
+        position: relative;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 0 50px rgba(0, 191, 255, 0.5), 0 0 0 6px rgba(207,238,255,0.9), 0 0 0 10px rgba(80,150,200,0.6), 0 14px 40px rgba(0,0,0,0.5);
+        height: 100%;
+        max-height: 100%;
+    }
+
+    #gameCanvas {
+        display: block;
+        height: 100%;
+        width: auto;
+        max-width: 100%;
+    }
+
+    /* ---------- D-Pad Controls ---------- */
+    .controls {
+        display: grid;
+        grid-template-columns: clamp(60px,9vw,100px) clamp(60px,9vw,100px) clamp(60px,9vw,100px);
+        grid-template-rows: clamp(60px,9vw,100px) clamp(60px,9vw,100px) clamp(60px,9vw,100px);
+        gap: 8px;
+        justify-content: center;
+        align-content: center;
+        flex: 0 0 auto;
+    }
+
+    .control-btn {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(160deg, #5fa0d6, #1f4f78);
+        border: 3px solid rgba(224, 244, 255, 0.9);
+        border-radius: 18px;
+        font-size: clamp(28px, 4vw, 44px);
+        color: #f4fbff;
+        cursor: pointer;
+        transition: all 0.15s;
+        box-shadow: 0 0 16px rgba(135, 206, 235, 0.45), inset 0 0 10px rgba(255,255,255,0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .control-btn:active {
+        transform: scale(0.92);
+        box-shadow: 0 0 22px rgba(135, 206, 235, 0.75), inset 0 0 14px rgba(255,255,255,0.25);
+        background: linear-gradient(160deg, #79b6e6, #2c649a);
+    }
+
+    .btn-up    { grid-column: 2; grid-row: 1; }
+    .btn-left  { grid-column: 1; grid-row: 2; }
+    .btn-right { grid-column: 3; grid-row: 2; }
+    .btn-down  { grid-column: 2; grid-row: 3; }
+
+    .info-text {
+        font-size: clamp(12px, 1.3vw, 15px);
+        color: #bfe7ff;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+        text-align: center;
+        flex: 0 0 auto;
+    }
+
+    /* ---------- Game Over Screen ---------- */
+    #gameOverScreen {
+        display: none;
+        text-align: center;
+        flex-direction: column;
+        gap: 26px;
+        align-items: center;
+        z-index: 2;
+        padding: 20px;
+    }
+
+    .game-over-emoji { font-size: clamp(60px, 10vw, 100px); filter: drop-shadow(0 0 20px rgba(150,220,255,0.6)); }
+
+    .game-over-text {
+        font-size: clamp(32px, 5vw, 50px);
+        font-weight: 800;
+        color: #eaf7ff;
+        text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.6);
+    }
+
+    .game-over-message {
+        font-size: clamp(16px, 2vw, 22px);
+        color: #bfe7ff;
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+        max-width: 560px;
+    }
+
+    .play-again-btn {
+        background: linear-gradient(160deg, #5fa0d6, #1f4f78);
+        border: 3px solid rgba(224, 244, 255, 0.9);
+        padding: 16px 42px;
+        border-radius: 14px;
+        font-size: clamp(17px, 2vw, 22px);
+        font-weight: 700;
+        color: #eaf7ff;
+        cursor: pointer;
+        transition: all 0.25s;
+        box-shadow: 0 0 22px rgba(135, 206, 235, 0.45);
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+    }
+
+    .play-again-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 32px rgba(135, 206, 235, 0.75);
+    }
+
+    /* ---------- Frozen (2nd-hit) Game Over Effect ---------- */
+    #frozenOverlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 5;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 18px;
+        background: rgba(180, 220, 245, 0.35);
+        backdrop-filter: blur(1px);
+        animation: frostIn 0.5s ease-out forwards;
+    }
+
+    @keyframes frostIn {
+        0% { background: rgba(180,220,245,0); backdrop-filter: blur(0); }
+        100% { background: rgba(180,220,245,0.35); backdrop-filter: blur(1px); }
+    }
+
+    #frozenCracksSvg {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 5;
+        pointer-events: none;
+    }
+
+    .frozen-title {
+        font-size: clamp(56px, 12vw, 130px);
+        font-weight: 900;
+        letter-spacing: 4px;
+        color: #eaf8ff;
+        background: linear-gradient(180deg, #ffffff 0%, #cdeeff 45%, #6fc3ee 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 35px rgba(150,220,255,0.9);
+        filter: drop-shadow(0 6px 10px rgba(0,30,60,0.5));
+        animation: frozenPop 0.5s cubic-bezier(.2,1.4,.4,1) 0.15s both;
+        position: relative;
+        z-index: 6;
+    }
+
+    @keyframes frozenPop {
+        0% { transform: scale(0.4); opacity: 0; }
+        70% { transform: scale(1.08); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .frozen-subtext {
+        font-size: clamp(16px, 2.2vw, 24px);
+        color: #eaf8ff;
+        text-shadow: 1px 1px 5px rgba(0,0,0,0.6);
+        position: relative;
+        z-index: 6;
+        animation: frozenPop 0.5s ease-out 0.4s both;
+    }
+
+    /* ---------- Ambient snowfall ---------- */
+    @keyframes snowfall {
+        0% { transform: translateY(-10vh) translateX(0); opacity: 1; }
+        100% { transform: translateY(110vh) translateX(20px); opacity: 0; }
+    }
+
+    .snowflake {
+        position: fixed;
+        top: -10%;
+        color: #ffffff;
+        font-size: 18px;
+        opacity: 0.75;
+        pointer-events: none;
+        animation: snowfall 10s linear infinite;
+        z-index: 1;
+    }
+</style>
+</head>
+<body>
+<div class="sky-bg"></div>
+<div class="aurora-band"></div>
+<div class="container">
+
+    <!-- Start Screen -->
+    <div id="startScreen">
+        <div class="title">❄ FROZEN MAZE ❄</div>
+        <div class="subtitle">Escape the Icy Wonderland and reach the Castle!</div>
+        <div class="character-select">
+            <button class="character-btn" onclick="startGame('elsa')">
+                <canvas id="elsaPortrait" class="character-portrait" width="140" height="140"></canvas>
+                Elsa
+            </button>
+            <button class="character-btn" onclick="startGame('anna')">
+                <canvas id="annaPortrait" class="character-portrait" width="140" height="140"></canvas>
+                Anna
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen">
+        <div class="game-header">
+            <div id="characterDisplay"></div>
+            <div>🏰 Find the Castle</div>
+        </div>
+
+        <div class="game-canvas-frame">
+            <div class="game-canvas-container">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn btn-up" onclick="moveCharacter('up')">⬆️</button>
+            <button class="control-btn btn-left" onclick="moveCharacter('left')">⬅️</button>
+            <button class="control-btn btn-right" onclick="moveCharacter('right')">➡️</button>
+            <button class="control-btn btn-down" onclick="moveCharacter('down')">⬇️</button>
+        </div>
+        <div class="info-text">Use the arrows above or your keyboard arrow keys to move</div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen">
+        <div class="game-over-emoji" id="gameOverEmoji"></div>
+        <div class="game-over-text" id="gameOverText"></div>
+        <div class="game-over-message" id="gameOverMessage"></div>
+        <button class="play-again-btn" onclick="location.reload()">Play Again</button>
+    </div>
+
+    <!-- Frozen (2nd hit) Game Over Effect -->
+    <svg id="frozenCracksSvg" viewBox="0 0 1000 1000" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="frozenOverlay">
+        <div class="frozen-title">FROZEN</div>
+        <div class="frozen-subtext">Caught by the cold... Try again!</div>
+        <button class="play-again-btn" onclick="location.reload()">Play Again</button>
+    </div>
+</div>
+
+<script>
+    /* ============ Portrait Art (start-screen buttons) ============ */
+    function drawElsaPortrait(canvas) {
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const s = W / 100;
+        ctx.save(); ctx.scale(s, s);
+        const g = ctx.createRadialGradient(50,40,5,50,50,55);
+        g.addColorStop(0, '#3c7aa8'); g.addColorStop(1, '#143552');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 100, 100);
+
+        ctx.fillStyle = '#bfe9ff';
+        ctx.beginPath(); ctx.moveTo(20, 95); ctx.quadraticCurveTo(50, 55, 80, 95); ctx.closePath(); ctx.fill();
+
+        const dressGrad = ctx.createLinearGradient(0,55,0,95);
+        dressGrad.addColorStop(0, '#aee4ff'); dressGrad.addColorStop(1, '#6fc3ee');
+        ctx.fillStyle = dressGrad;
+        ctx.beginPath(); ctx.moveTo(35, 58); ctx.lineTo(65, 58); ctx.lineTo(74, 95); ctx.lineTo(26, 95); ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = '#fbe0c4'; ctx.fillRect(45, 48, 10, 12);
+
+        ctx.fillStyle = '#e9d99a';
+        ctx.beginPath(); ctx.moveTo(38, 30); ctx.quadraticCurveTo(30, 60, 40, 80); ctx.quadraticCurveTo(34, 60, 36, 32); ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = '#fbe0c4';
+        ctx.beginPath(); ctx.ellipse(50, 32, 16, 18, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#f3e3a8';
+        ctx.beginPath(); ctx.ellipse(50, 22, 17, 13, 0, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(34, 22); ctx.quadraticCurveTo(30, 14, 42, 12); ctx.quadraticCurveTo(36, 18, 36, 26); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(66, 22); ctx.quadraticCurveTo(70, 14, 58, 12); ctx.quadraticCurveTo(64, 18, 64, 26); ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(50, 16, 2.5, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#2f4858';
+        ctx.beginPath(); ctx.ellipse(44, 32, 2, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(56, 32, 2, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = '#d8c477'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(41, 27); ctx.lineTo(47, 26); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(53, 26); ctx.lineTo(59, 27); ctx.stroke();
+
+        ctx.fillStyle = '#d97f8a';
+        ctx.beginPath(); ctx.ellipse(50, 40, 3.5, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = 'rgba(230,140,140,0.35)';
+        ctx.beginPath(); ctx.ellipse(40, 37, 3, 2, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(60, 37, 3, 2, 0, 0, Math.PI*2); ctx.fill();
+
+        ctx.strokeStyle = 'rgba(180,230,255,0.5)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(50, 50, 48, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawAnnaPortrait(canvas) {
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const s = W / 100;
+        ctx.save(); ctx.scale(s, s);
+        const g = ctx.createRadialGradient(50,40,5,50,50,55);
+        g.addColorStop(0, '#3c7aa8'); g.addColorStop(1, '#143552');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 100, 100);
+
+        ctx.fillStyle = '#1e5a3a';
+        ctx.beginPath(); ctx.moveTo(20, 95); ctx.quadraticCurveTo(50, 55, 80, 95); ctx.closePath(); ctx.fill();
+
+        const dressGrad = ctx.createLinearGradient(0,55,0,95);
+        dressGrad.addColorStop(0, '#3a7a4f'); dressGrad.addColorStop(1, '#235c39');
+        ctx.fillStyle = dressGrad;
+        ctx.beginPath(); ctx.moveTo(35, 58); ctx.lineTo(65, 58); ctx.lineTo(74, 95); ctx.lineTo(26, 95); ctx.closePath(); ctx.fill();
+
+        ctx.strokeStyle = '#e8c460'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(35,58); ctx.lineTo(65,58); ctx.stroke();
+
+        ctx.fillStyle = '#f7d9bd'; ctx.fillRect(45, 48, 10, 12);
+
+        ctx.fillStyle = '#9c4a26';
+        ctx.beginPath(); ctx.moveTo(36, 30); ctx.quadraticCurveTo(26, 58, 38, 82); ctx.quadraticCurveTo(32, 56, 34, 32); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(64, 30); ctx.quadraticCurveTo(74, 58, 62, 82); ctx.quadraticCurveTo(68, 56, 66, 32); ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = '#f7d9bd';
+        ctx.beginPath(); ctx.ellipse(50, 32, 16, 18, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#a8542c';
+        ctx.beginPath(); ctx.ellipse(50, 21, 17, 12, 0, Math.PI, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#e9e2d6';
+        ctx.beginPath(); ctx.moveTo(40, 14); ctx.quadraticCurveTo(36, 26, 40, 34); ctx.quadraticCurveTo(36, 22, 38, 13); ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = '#2f4858';
+        ctx.beginPath(); ctx.ellipse(44, 32, 2, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(56, 32, 2, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = '#8a4322'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(41, 27); ctx.lineTo(47, 26); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(53, 26); ctx.lineTo(59, 27); ctx.stroke();
+
+        ctx.fillStyle = 'rgba(150,90,50,0.5)';
+        [[41,36],[44,38],[47,37],[53,37],[56,38],[59,36]].forEach(p=>{
+            ctx.beginPath(); ctx.arc(p[0],p[1],0.7,0,Math.PI*2); ctx.fill();
+        });
+
+        ctx.fillStyle = '#c9636f';
+        ctx.beginPath(); ctx.ellipse(50, 40, 3.5, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = 'rgba(230,140,140,0.35)';
+        ctx.beginPath(); ctx.ellipse(40, 37, 3, 2, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(60, 37, 3, 2, 0, 0, Math.PI*2); ctx.fill();
+
+        ctx.strokeStyle = 'rgba(180,230,255,0.5)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(50, 50, 48, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+    }
+
+    drawElsaPortrait(document.getElementById('elsaPortrait'));
+    drawAnnaPortrait(document.getElementById('annaPortrait'));
+
+    /* ============ Game Engine ============ */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Smaller grid, bigger tiles -> chunky, easy-to-read maze for a young child
+    const maze = [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+        [1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,1,1,1,0,1],
+        [1,0,1,0,1,1,1,0,0,0,1,1,0,1,0,1,0,0,0,1],
+        [1,0,0,0,1,1,1,1,1,1,1,1,0,0,0,1,0,1,0,1],
+        [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1],
+        [1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,0,1],
+        [1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],
+        [1,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1],
+        [1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1,0,0,0],
+        [1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,1,1,0,0,0],
+        [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0],
+    ];
+    const ROWS = maze.length;
+    const COLS = maze[0].length;
+
+    // Castle position per the layout spreadsheet: column R (index 17), row 12 (index 11)
+    const CASTLE_X = 18;
+    const CASTLE_Y = 13;
+
+    let TILE_SIZE = 56; // recalculated on resize to fill the available space
+
+    function resizeCanvas() {
+        const frame = document.querySelector('.game-canvas-frame');
+        const availW = frame.clientWidth;
+        const availH = frame.clientHeight;
+        // pick the largest tile size that fits the grid into the available area
+        TILE_SIZE = Math.floor(Math.min(availW / COLS, availH / ROWS));
+        TILE_SIZE = Math.max(TILE_SIZE, 20);
+        canvas.width = TILE_SIZE * COLS;
+        canvas.height = TILE_SIZE * ROWS;
+        if (gameState.started) draw(performance.now());
+    }
+
+    let gameState = {
+        started: false,
+        character: null,       // the character currently being controlled
+        otherCharacter: null,  // the rescuer's identity, once needed
+        playerX: 1,
+        playerY: 1,
+        castleX: CASTLE_X,
+        castleY: CASTLE_Y,
+        gameOver: false,
+        won: false,
+        moveCount: 0,
+        // Freeze / rescue state
+        frozen: false,         // true once a villain has caught the controlled character
+        frozenX: 1,
+        frozenY: 1,
+        rescued: false,        // true once the rescuer reaches the frozen character
+        hitCount: 0            // counts villain catches; second catch ends the game
+    };
+
+    // Two villain patrol lanes per the layout spreadsheet: row index 6 and row index 10
+    const villains = [
+        { row: 6,  x: 0, dir: 1, cycle: 9000, phaseOffset: 0,    startTime: 0, caught: false },
+        { row: 10, x: COLS, dir: -1, cycle: 9000, phaseOffset: 4500, startTime: 0, caught: false }
+    ];
+
+    const sparkles = [];
+    function buildSparkles() {
+        sparkles.length = 0;
+        for (let i = 0; i < 70; i++) {
+            sparkles.push({
+                xr: Math.random(), yr: Math.random(),
+                r: Math.random() * 1.8 + 0.5,
+                tw: Math.random() * Math.PI * 2
+            });
+        }
+    }
+    buildSparkles();
+
+    function startGame(character) {
+        gameState.started = true;
+        gameState.character = character;
+        gameState.otherCharacter = character === 'elsa' ? 'anna' : 'elsa';
+        document.getElementById('startScreen').style.display = 'none';
+        document.getElementById('gameScreen').style.display = 'flex';
+        document.getElementById('characterDisplay').textContent = character === 'elsa' ? '❄️ Elsa' : '🧡 Anna';
+
+        resizeCanvas();
+        const now = performance.now();
+        villains.forEach(v => { v.startTime = now - v.phaseOffset; });
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function canMoveTo(x, y) {
+        if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return false;
+        return maze[y][x] === 0;
+    }
+
+    function moveCharacter(direction) {
+        if (gameState.gameOver || gameState.won) return;
+
+        let newX = gameState.playerX;
+        let newY = gameState.playerY;
+        if (direction === 'up') newY--;
+        if (direction === 'down') newY++;
+        if (direction === 'left') newX--;
+        if (direction === 'right') newX++;
+
+        if (!canMoveTo(newX, newY)) return;
+
+        // The trailing/follow character always steps into the tile the leader just left,
+        // so the pair appears to walk together rather than overlap.
+        const prevX = gameState.playerX;
+        const prevY = gameState.playerY;
+
+        gameState.playerX = newX;
+        gameState.playerY = newY;
+        gameState.moveCount++;
+
+        if (gameState.rescued) {
+            gameState.frozenX = prevX;
+            gameState.frozenY = prevY;
+        }
+
+        checkCollisions();
+    }
+
+    function updateVillains(now) {
+        villains.forEach(v => {
+            if (v.caught) return; // a villain that has caught someone leaves the screen
+            const elapsed = (now - v.startTime) % v.cycle;
+            const t = elapsed / v.cycle;
+            const triangle = t < 0.5 ? (t * 2) : (2 - t * 2);
+            v.x = triangle * (COLS - 1);
+        });
+    }
+
+    function checkCollisions() {
+        // Reaching the castle only ends the game once everyone is moving as one group
+        // (i.e. either no freeze has happened yet, or the rescue is complete)
+        const distToCastle = Math.hypot(gameState.playerX - gameState.castleX, gameState.playerY - gameState.castleY);
+        if (distToCastle < 0.6 && (!gameState.frozen || gameState.rescued)) {
+            endGame(true);
+            return;
+        }
+
+        // Any villain touch counts as a "hit" — first hit freezes + triggers rescue,
+        // second hit (whenever it happens) ends the game with the FROZEN screen.
+        for (const v of villains) {
+            if (v.caught) continue;
+            const distToV = Math.hypot(gameState.playerX - v.x, gameState.playerY - v.row);
+            if (distToV < 0.75) {
+                registerHit(v);
+                return;
+            }
+        }
+
+        if (gameState.frozen && !gameState.rescued) {
+            // Rescue mode: check if the rescuer has reached the frozen character
+            const distToFrozen = Math.hypot(gameState.playerX - gameState.frozenX, gameState.playerY - gameState.frozenY);
+            if (distToFrozen < 0.6) {
+                gameState.rescued = true;
+                document.getElementById('characterDisplay').textContent =
+                    (gameState.character === 'elsa' ? '🧡 Anna' : '❄️ Elsa') + ' + ' +
+                    (gameState.character === 'elsa' ? '❄️ Elsa' : '🧡 Anna');
+            }
+        }
+    }
+
+    function registerHit(villain) {
+        gameState.hitCount++;
+        villain.caught = true;
+
+        if (gameState.hitCount >= 2) {
+            endGame(false);
+            return;
+        }
+
+        freezeCharacter(villain);
+    }
+
+    function freezeCharacter(villain) {
+        // The villain who made the catch disappears, the controlled character freezes
+        // in place, and the other character appears back at the maze entrance to rescue them.
+        gameState.frozen = true;
+        gameState.frozenX = gameState.playerX;
+        gameState.frozenY = gameState.playerY;
+
+        // Swap control to the rescuer, who starts back at the maze entrance
+        const rescuer = gameState.otherCharacter;
+        gameState.character = rescuer;
+        gameState.otherCharacter = (rescuer === 'elsa') ? 'anna' : 'elsa';
+        gameState.playerX = 1;
+        gameState.playerY = 1;
+
+        document.getElementById('characterDisplay').textContent =
+            (rescuer === 'elsa' ? '❄️ Elsa' : '🧡 Anna') + ' — go rescue your sister!';
+    }
+
+    /* ============ Drawing helpers ============ */
+    // center-of-tile pixel coordinates
+    function cx(gridX) { return gridX * TILE_SIZE + TILE_SIZE / 2; }
+    function cy(gridY) { return gridY * TILE_SIZE + TILE_SIZE / 2; }
+
+    function drawBackground(now) {
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#dff3ff');
+        grad.addColorStop(0.45, '#bfe2f7');
+        grad.addColorStop(1, '#eef8ff');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // distant mountain silhouettes for Frozen-style backdrop feel
+        ctx.fillStyle = 'rgba(150,195,225,0.45)';
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height * 0.22);
+        ctx.lineTo(canvas.width * 0.12, canvas.height * 0.06);
+        ctx.lineTo(canvas.width * 0.24, canvas.height * 0.2);
+        ctx.lineTo(canvas.width * 0.38, canvas.height * 0.02);
+        ctx.lineTo(canvas.width * 0.55, canvas.height * 0.18);
+        ctx.lineTo(canvas.width * 0.7, canvas.height * 0.04);
+        ctx.lineTo(canvas.width * 0.86, canvas.height * 0.2);
+        ctx.lineTo(canvas.width, canvas.height * 0.08);
+        ctx.lineTo(canvas.width, 0);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        const vg = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height*0.3, canvas.width/2, canvas.height/2, canvas.width*0.7);
+        vg.addColorStop(0, 'rgba(255,255,255,0)');
+        vg.addColorStop(1, 'rgba(150,195,225,0.3)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        sparkles.forEach(s => {
+            const a = 0.3 + 0.5 * Math.abs(Math.sin(now / 600 + s.tw));
+            ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
+            ctx.beginPath();
+            ctx.arc(s.xr * canvas.width, s.yr * canvas.height, s.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function drawWalls() {
+        for (let y = 0; y < ROWS; y++) {
+            for (let x = 0; x < COLS; x++) {
+                if (maze[y][x] === 1) {
+                    const px = x * TILE_SIZE;
+                    const py = y * TILE_SIZE;
+
+                    const wallGrad = ctx.createLinearGradient(px, py, px, py + TILE_SIZE);
+                    wallGrad.addColorStop(0, '#cdeeff');
+                    wallGrad.addColorStop(0.5, '#78b9e3');
+                    wallGrad.addColorStop(1, '#3e7fb3');
+                    ctx.fillStyle = wallGrad;
+                    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+                    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+                    ctx.lineWidth = Math.max(1, TILE_SIZE * 0.03);
+                    ctx.strokeRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+
+                    // soft glossy highlight blob in the corner (no crack lines / arrow marks)
+                    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+                    ctx.beginPath();
+                    ctx.ellipse(px + TILE_SIZE * 0.3, py + TILE_SIZE * 0.28, TILE_SIZE * 0.16, TILE_SIZE * 0.1, -0.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // icicle hanging from exposed top edges
+                    if (y === 0 || maze[y-1][x] === 0) {
+                        const iw = TILE_SIZE * 0.22;
+                        const ih = TILE_SIZE * 0.32;
+                        ctx.fillStyle = 'rgba(235,250,255,0.95)';
+                        ctx.beginPath();
+                        ctx.moveTo(px + TILE_SIZE*0.32, py + TILE_SIZE);
+                        ctx.lineTo(px + TILE_SIZE*0.32 + iw/2, py + TILE_SIZE + ih);
+                        ctx.lineTo(px + TILE_SIZE*0.32 + iw, py + TILE_SIZE);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+    }
+
+    function drawPineTree(px, py, scale) {
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = '#1f5c42';
+        [0, 1, 2].forEach(i => {
+            const w = 14 - i * 3;
+            const yoff = -i * 7;
+            ctx.beginPath();
+            ctx.moveTo(0, yoff - 10);
+            ctx.lineTo(-w, yoff + 4);
+            ctx.lineTo(w, yoff + 4);
+            ctx.closePath();
+            ctx.fill();
+        });
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-4, 4); ctx.lineTo(4, 4); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#5a3a22';
+        ctx.fillRect(-2, 4, 4, 5);
+        ctx.restore();
+    }
+
+    function drawCastle(gridX, gridY, now) {
+        const px = cx(gridX);
+        const py = cy(gridY);
+        const scale = TILE_SIZE / 25; // base art drawn for a 25px tile, scaled up
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(scale, scale);
+
+        // pulsing glow halo so the castle pops against the background
+        const pulse = 22 + Math.sin(now / 300) * 4;
+        const glow = ctx.createRadialGradient(0, -10, 0, 0, -10, pulse + 22);
+        glow.addColorStop(0, 'rgba(255,255,255,0.65)');
+        glow.addColorStop(0.5, 'rgba(180,235,255,0.35)');
+        glow.addColorStop(1, 'rgba(180,235,255,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, -10, pulse + 22, 0, Math.PI * 2);
+        ctx.fill();
+
+        // flanking pine trees for landscape framing
+        drawPineTree(-22, 8, 1);
+        drawPineTree(20, 9, 0.9);
+
+        // courtyard wall
+        ctx.fillStyle = '#a8d4ec';
+        ctx.fillRect(-18, -4, 36, 14);
+        ctx.strokeStyle = '#5a93b8';
+        ctx.lineWidth = 1;
+        for (let i = -18; i <= 18; i += 4.5) ctx.strokeRect(i, -4, 4.5, 7);
+
+        // side towers
+        [-15, 11].forEach((sx, idx) => {
+            const towerGrad = ctx.createLinearGradient(sx, -26, sx, -4);
+            towerGrad.addColorStop(0, '#e6f7ff');
+            towerGrad.addColorStop(1, '#6fa8cf');
+            ctx.fillStyle = towerGrad;
+            ctx.fillRect(sx, -26, 4.5, 22);
+            ctx.fillStyle = '#bfe2f6';
+            ctx.fillRect(sx - 0.5, -28, 2, 3);
+            ctx.fillRect(sx + 3, -28, 2, 3);
+            ctx.fillStyle = '#3f6f93';
+            ctx.beginPath();
+            ctx.moveTo(sx - 1.5, -26);
+            ctx.lineTo(sx + 2.2, -36);
+            ctx.lineTo(sx + 6, -26);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#eaf8ff';
+            ctx.beginPath();
+            ctx.moveTo(sx + 2.2, -36);
+            ctx.lineTo(sx + 1, -41);
+            ctx.lineTo(sx + 3.4, -36);
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        // central keep
+        const keepGrad = ctx.createLinearGradient(-8, -36, 8, -4);
+        keepGrad.addColorStop(0, '#f2fbff');
+        keepGrad.addColorStop(1, '#7fb8de');
+        ctx.fillStyle = keepGrad;
+        ctx.fillRect(-8, -36, 16, 32);
+
+        // glowing window
+        const winFlicker = 0.7 + 0.3 * Math.sin(now / 250);
+        ctx.fillStyle = `rgba(255, 225, 140, ${winFlicker.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.moveTo(-3, -22); ctx.lineTo(3, -22); ctx.lineTo(3, -12); ctx.lineTo(0, -8); ctx.lineTo(-3,-12);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#cfe9f9';
+        for (let i = -8; i < 8; i += 4.5) ctx.fillRect(i, -38, 3, 3.5);
+
+        // central spire
+        ctx.fillStyle = '#9fcde8';
+        ctx.beginPath();
+        ctx.moveTo(-7, -36);
+        ctx.lineTo(0, -52);
+        ctx.lineTo(7, -36);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#f5fcff';
+        ctx.beginPath();
+        ctx.moveTo(-2, -38);
+        ctx.lineTo(0, -52);
+        ctx.lineTo(2, -38);
+        ctx.closePath();
+        ctx.fill();
+
+        // outline so the silhouette reads clearly at a glance
+        ctx.strokeStyle = 'rgba(20,60,90,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-8, -36, 16, 32);
+
+        // flag
+        ctx.strokeStyle = '#cfe9f9';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, -52); ctx.lineTo(0, -59); ctx.stroke();
+        ctx.fillStyle = '#7fc7e8';
+        const flap = Math.sin(now / 200) * 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -59);
+        ctx.lineTo(8 + flap, -56);
+        ctx.lineTo(0, -53);
+        ctx.closePath();
+        ctx.fill();
+
+        // drifting sparkle particles
+        for (let i = 0; i < 6; i++) {
+            const ang = now / 500 + i * (Math.PI * 2 / 6);
+            const r = 22 + Math.sin(now/400 + i) * 4;
+            const sx2 = Math.cos(ang) * r;
+            const sy2 = -20 + Math.sin(ang) * (r * 0.5);
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath();
+            ctx.arc(sx2, sy2, 1.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    function drawPlayer(gridX, gridY, character, now) {
+        const px = cx(gridX);
+        const py = cy(gridY);
+        const scale = TILE_SIZE / 25;
+        const bob = Math.sin(now / 180) * 1;
+        ctx.save();
+        ctx.translate(px, py + bob * scale);
+        ctx.scale(scale, scale);
+
+        const isElsa = character === 'elsa';
+        const dressTop = isElsa ? '#bfe9ff' : '#3a7a4f';
+        const dressBot = isElsa ? '#6fc3ee' : '#235c39';
+        const hairColor = isElsa ? '#f3e3a8' : '#a8542c';
+        const skin = '#fbe0c4';
+
+        // strong contrast halo so the character pops against ice/snow tiles
+        const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, 13);
+        halo.addColorStop(0, 'rgba(255,255,255,0.55)');
+        halo.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+
+        // ground shadow
+        ctx.fillStyle = 'rgba(20,50,80,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(0, 9, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // cape
+        ctx.fillStyle = isElsa ? 'rgba(190,235,255,0.75)' : 'rgba(30,90,58,0.75)';
+        ctx.beginPath();
+        ctx.moveTo(-4, -2);
+        ctx.quadraticCurveTo(-7 + Math.sin(now/150), 6, -3, 9);
+        ctx.lineTo(3, 9);
+        ctx.quadraticCurveTo(7 + Math.sin(now/150+1), 6, 4, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        // dress/body
+        const bodyGrad = ctx.createLinearGradient(0, -2, 0, 8);
+        bodyGrad.addColorStop(0, dressTop);
+        bodyGrad.addColorStop(1, dressBot);
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -2);
+        ctx.lineTo(3.5, -2);
+        ctx.lineTo(5, 9);
+        ctx.lineTo(-5, 9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(20,40,60,0.35)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+
+        // arms
+        ctx.fillStyle = skin;
+        ctx.beginPath(); ctx.ellipse(-4.5, 2, 1.3, 3, 0.3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(4.5, 2, 1.3, 3, -0.3, 0, Math.PI*2); ctx.fill();
+
+        // neck + head
+        ctx.fillStyle = skin;
+        ctx.fillRect(-1.4, -5, 2.8, 3.5);
+        ctx.beginPath();
+        ctx.ellipse(0, -8, 4.2, 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // hair
+        ctx.fillStyle = hairColor;
+        ctx.beginPath();
+        ctx.ellipse(0, -10.5, 4.6, 3.2, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-4.2, -6, 1.4, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(4.2, -6, 1.4, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // eyes
+        ctx.fillStyle = '#2f4858';
+        ctx.beginPath(); ctx.arc(-1.4, -8, 0.65, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(1.4, -8, 0.65, 0, Math.PI*2); ctx.fill();
+
+        // smile
+        ctx.strokeStyle = '#c46b78';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.arc(0, -6.3, 1, 0.2, Math.PI - 0.2); ctx.stroke();
+
+        if (isElsa) {
+            ctx.fillStyle = 'rgba(200,240,255,0.95)';
+            for (let i = 0; i < 3; i++) {
+                const a = now/250 + i*2;
+                ctx.beginPath();
+                ctx.arc(Math.cos(a)*7, 6+Math.sin(a)*2, 0.8, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        ctx.restore();
+    }
+
+    function drawFrozenCharacter(gridX, gridY, character, now) {
+        const px = cx(gridX);
+        const py = cy(gridY);
+        const scale = TILE_SIZE / 25;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(scale, scale);
+
+        const isElsa = character === 'elsa';
+        const dressTop = isElsa ? '#bfe9ff' : '#3a7a4f';
+        const dressBot = isElsa ? '#6fc3ee' : '#235c39';
+        const hairColor = isElsa ? '#f3e3a8' : '#a8542c';
+        const skin = '#fbe0c4';
+
+        // pale icy halo instead of the warm contrast halo, to read as "frozen"
+        const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, 14);
+        halo.addColorStop(0, 'rgba(210,240,255,0.6)');
+        halo.addColorStop(1, 'rgba(210,240,255,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI*2); ctx.fill();
+
+        ctx.fillStyle = 'rgba(20,50,80,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(0, 9, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // body (static, no cape flutter or bob since they're frozen still)
+        ctx.fillStyle = dressTop;
+        ctx.beginPath();
+        ctx.moveTo(-4, -2);
+        ctx.quadraticCurveTo(-7, 6, -3, 9);
+        ctx.lineTo(3, 9);
+        ctx.quadraticCurveTo(7, 6, 4, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        const bodyGrad = ctx.createLinearGradient(0, -2, 0, 8);
+        bodyGrad.addColorStop(0, dressTop);
+        bodyGrad.addColorStop(1, dressBot);
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -2);
+        ctx.lineTo(3.5, -2);
+        ctx.lineTo(5, 9);
+        ctx.lineTo(-5, 9);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = skin;
+        ctx.beginPath(); ctx.ellipse(-4.5, 2, 1.3, 3, 0.3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(4.5, 2, 1.3, 3, -0.3, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(-1.4, -5, 2.8, 3.5);
+        ctx.beginPath();
+        ctx.ellipse(0, -8, 4.2, 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = hairColor;
+        ctx.beginPath();
+        ctx.ellipse(0, -10.5, 4.6, 3.2, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-4.2, -6, 1.4, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(4.2, -6, 1.4, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // closed/worried eyes instead of open ones, to read as frozen-in-place
+        ctx.strokeStyle = '#2f4858';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(-2.1, -8); ctx.lineTo(-0.7, -8); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0.7, -8); ctx.lineTo(2.1, -8); ctx.stroke();
+
+        // frost overlay tint across the whole figure
+        ctx.fillStyle = 'rgba(200, 235, 255, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(0, -2, 9, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ice crystal sparkles frozen around them
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        for (let i = 0; i < 4; i++) {
+            const ang = (i / 4) * Math.PI * 2;
+            const r = 9 + Math.sin(now/500 + i) * 1.5;
+            ctx.beginPath();
+            ctx.arc(Math.cos(ang) * r, -3 + Math.sin(ang) * r * 0.6, 0.8, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    function drawVillain(v, now) {
+        const px = cx(v.x);
+        const py = cy(v.row);
+        const scale = TILE_SIZE / 25;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(scale, scale);
+
+        const aura = ctx.createRadialGradient(0, -4, 0, 0, -4, 15);
+        aura.addColorStop(0, 'rgba(150,30,40,0.4)');
+        aura.addColorStop(1, 'rgba(150,30,40,0)');
+        ctx.fillStyle = aura;
+        ctx.beginPath(); ctx.arc(0, -4, 15, 0, Math.PI*2); ctx.fill();
+
+        ctx.fillStyle = 'rgba(40,30,60,0.85)';
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -2);
+        ctx.quadraticCurveTo(-9 * (v.dir>0?-1:1), 5, -4, 9);
+        ctx.lineTo(4, 9);
+        ctx.quadraticCurveTo(9 * (v.dir>0?-1:1), 5, 3.5, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        const coatGrad = ctx.createLinearGradient(0,-2,0,9);
+        coatGrad.addColorStop(0, '#2d4a5e');
+        coatGrad.addColorStop(1, '#16293a');
+        ctx.fillStyle = coatGrad;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -2); ctx.lineTo(3.5, -2); ctx.lineTo(5, 9); ctx.lineTo(-5, 9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#d4af37';
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(0, -1 + i*3, 0.5, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        ctx.fillStyle = '#e0b48c';
+        ctx.beginPath();
+        ctx.ellipse(0, -8, 4, 4.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#3b2a1e';
+        ctx.beginPath();
+        ctx.ellipse(0, -10.5, 4.4, 2.8, 0, Math.PI, Math.PI*2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(-2.3, -8); ctx.lineTo(-0.6, -8.3); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0.6, -8.3); ctx.lineTo(2.3, -8); ctx.stroke();
+
+        ctx.strokeStyle = '#5c2a2a';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(-1.5,-6); ctx.quadraticCurveTo(0,-5.3,1.8,-6.3); ctx.stroke();
+
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(-2.6,-9.6); ctx.lineTo(-0.8,-9.2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0.8,-9.2); ctx.lineTo(2.6,-9.6); ctx.stroke();
+
+        ctx.restore();
+    }
+
+    function draw(now) {
+        drawBackground(now);
+        drawWalls();
+        drawCastle(gameState.castleX, gameState.castleY, now);
+        villains.forEach(v => { if (!v.caught) drawVillain(v, now); });
+
+        if (gameState.frozen && !gameState.rescued) {
+            // Frozen character waits in place (icy, dimmed) while the rescuer is controlled
+            drawFrozenCharacter(gameState.frozenX, gameState.frozenY, gameState.otherCharacter, now);
+            drawPlayer(gameState.playerX, gameState.playerY, gameState.character, now);
+        } else if (gameState.frozen && gameState.rescued) {
+            // Reunited: draw the trailing character one tile behind, then the leader on top
+            drawPlayer(gameState.frozenX, gameState.frozenY, gameState.otherCharacter, now);
+            drawPlayer(gameState.playerX, gameState.playerY, gameState.character, now);
+        } else {
+            drawPlayer(gameState.playerX, gameState.playerY, gameState.character, now);
+        }
+    }
+
+    function gameLoop(now) {
+        if (gameState.gameOver || gameState.won) return;
+        updateVillains(now);
+        checkCollisions();
+        draw(now);
+        if (!gameState.gameOver && !gameState.won) {
+            requestAnimationFrame(gameLoop);
+        }
+    }
+
+    function generateIceCracks() {
+        const svg = document.getElementById('frozenCracksSvg');
+        if (!svg || svg.childNodes.length) return; // only build once
+        const cx0 = 500, cy0 = 500;
+        const mainCracks = 9;
+        for (let i = 0; i < mainCracks; i++) {
+            const angle = (i / mainCracks) * Math.PI * 2 + Math.random() * 0.3;
+            let x = cx0, y = cy0;
+            let path = `M${x},${y} `;
+            const segments = 5 + Math.floor(Math.random() * 4);
+            let a = angle;
+            for (let s = 0; s < segments; s++) {
+                a += (Math.random() - 0.5) * 0.6;
+                const dist = 60 + Math.random() * 90;
+                x += Math.cos(a) * dist;
+                y += Math.sin(a) * dist;
+                path += `L${x.toFixed(1)},${y.toFixed(1)} `;
+            }
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            line.setAttribute('d', path);
+            line.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+            line.setAttribute('stroke-width', (1.5 + Math.random()).toFixed(1));
+            line.setAttribute('fill', 'none');
+            line.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(line);
+
+            // a few small offshoot cracks branching from this main crack
+            for (let b = 0; b < 2; b++) {
+                const branchStart = 1 + Math.floor(Math.random() * (segments - 1));
+                const bx = cx0 + Math.cos(angle) * (branchStart * 70);
+                const by = cy0 + Math.sin(angle) * (branchStart * 70);
+                const ba = angle + (Math.random() > 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.6);
+                const blen = 30 + Math.random() * 50;
+                const branch = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                branch.setAttribute('d', `M${bx.toFixed(1)},${by.toFixed(1)} L${(bx+Math.cos(ba)*blen).toFixed(1)},${(by+Math.sin(ba)*blen).toFixed(1)}`);
+                branch.setAttribute('stroke', 'rgba(255,255,255,0.55)');
+                branch.setAttribute('stroke-width', '1');
+                branch.setAttribute('fill', 'none');
+                branch.setAttribute('stroke-linecap', 'round');
+                svg.appendChild(branch);
+            }
+        }
+    }
+
+    function endGame(won) {
+        gameState.gameOver = !won;
+        gameState.won = won;
+
+        if (!won && gameState.hitCount >= 2) {
+            // Second hit: full-screen icy crack effect + bold FROZEN message
+            document.getElementById('gameScreen').style.display = 'none';
+            generateIceCracks();
+            document.getElementById('frozenCracksSvg').style.display = 'block';
+            document.getElementById('frozenOverlay').style.display = 'flex';
+            return;
+        }
+
+        document.getElementById('gameScreen').style.display = 'none';
+        document.getElementById('gameOverScreen').style.display = 'flex';
+
+        if (won) {
+            document.getElementById('gameOverEmoji').textContent = '🏰';
+            document.getElementById('gameOverText').textContent = 'You Escaped!';
+            document.getElementById('gameOverMessage').textContent = gameState.frozen
+                ? 'Together again, you both reached the Frozen Castle and saved the day!'
+                : 'You reached the Frozen Castle and saved the day!';
+        } else {
+            document.getElementById('gameOverEmoji').textContent = '❌';
+            document.getElementById('gameOverText').textContent = 'Game Over';
+            document.getElementById('gameOverMessage').textContent = 'Caught in the cold! Try again!';
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') moveCharacter('up');
+        if (e.key === 'ArrowDown') moveCharacter('down');
+        if (e.key === 'ArrowLeft') moveCharacter('left');
+        if (e.key === 'ArrowRight') moveCharacter('right');
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+
+    function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.className = 'snowflake';
+        snowflake.textContent = '❄';
+        snowflake.style.left = Math.random() * 100 + '%';
+        snowflake.style.fontSize = (12 + Math.random()*10) + 'px';
+        snowflake.style.animationDuration = (Math.random() * 5 + 8) + 's';
+        snowflake.style.animationDelay = Math.random() * 2 + 's';
+        document.body.appendChild(snowflake);
+        setTimeout(() => snowflake.remove(), 13000);
+    }
+    setInterval(createSnowflake, 300);
+</script>
+</body>
+</html>
