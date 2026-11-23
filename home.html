@@ -10,12 +10,13 @@ h1{font-size:clamp(34px,6.5vw,76px);text-shadow:0 0 24px rgba(255,255,255,.55);t
 a.c{flex:1 1 240px;max-width:340px;min-height:min(46vh,340px);border-radius:28px;border:5px solid rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.35);animation:f 3.5s ease-in-out infinite}
 a.c:active{transform:scale(.96)}
 a.c span{font-size:clamp(70px,12vw,130px);line-height:1}
+a.c svg{width:clamp(90px,13vw,150px);height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}
 a.c b{font-size:clamp(24px,3.6vw,38px);text-shadow:0 2px 8px rgba(0,0,0,.4);text-align:center}
 .f{background:linear-gradient(160deg,#7fd3ff,#2a6fd6)}.a{background:linear-gradient(160deg,#ffb347,#c0392b);animation-delay:.6s}.r{background:linear-gradient(160deg,#4fe3c1,#1b6fa8);animation-delay:1.2s}
 @keyframes f{50%{transform:translateY(-10px)}}
 </style></head><body><div id="w"><h1>Pick a Game!</h1><div id="g">
 <a class="c f" href="index.html"><span>&#10052;&#65039;</span><b>Frozen Maze</b></a>
-<a class="c a" href="aladdin.html"><span>&#129684;</span><b>Aladdin Adventure</b></a>
-<a class="c r" href="ariel.html"><span>&#129340;&#8205;&#9792;&#65039;</span><b>Ariel&#8217;s Reef</b></a>
+<a class="c a" href="aladdin.html"><span><svg viewBox="0 0 130 100"><g stroke="#8a5a00" stroke-width="3" stroke-linejoin="round"><path d="M24 58C24 86 100 86 100 58Z" fill="#ffd54a"/><ellipse cx="62" cy="58" rx="38" ry="8" fill="#ffe27a"/><path d="M44 52C44 32 80 32 80 52Z" fill="#ffd54a"/><circle cx="62" cy="30" r="5" fill="#ffe27a"/><path d="M98 60C112 58 116 48 122 34L112 36C108 46 104 50 96 52Z" fill="#ffd54a"/><path d="M26 60C8 56 8 80 26 76" fill="none" stroke-width="6"/><ellipse cx="62" cy="90" rx="16" ry="5" fill="#ffd54a"/></g><path d="M122 30C112 18 130 12 118 2" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".85"/><path d="M12 14l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#fff"/></svg></span><b>Aladdin Adventure</b></a>
+<a class="c r" href="ariel.html"><span><svg viewBox="0 0 120 100"><path d="M60 92L10 42C14 14 46 4 60 4S106 14 110 42Z" fill="#d68cf2" stroke="#7b2fa0" stroke-width="3" stroke-linejoin="round"/><g stroke="#7b2fa0" stroke-width="3" stroke-linecap="round"><path d="M60 92L26 22M60 92L44 10M60 92L60 6M60 92L76 10M60 92L94 22"/></g><ellipse cx="60" cy="94" rx="16" ry="5" fill="#d68cf2" stroke="#7b2fa0" stroke-width="3"/><circle cx="104" cy="14" r="5" fill="none" stroke="#fff" stroke-width="3"/><circle cx="14" cy="18" r="3.5" fill="none" stroke="#fff" stroke-width="3"/></svg></span><b>Ariel&#8217;s Reef</b></a>
 </div></div>
 <script>let l=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-l<=350)e.preventDefault();l=n},{passive:false});</script></body></html>
