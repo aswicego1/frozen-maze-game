@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes"><title>Pick a Game</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;color:#fff;background:linear-gradient(160deg,#2b1b5a,#6a2f8e 55%,#e0705a)}
+#w{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4vh;padding:20px}
+h1{font-size:clamp(34px,6.5vw,76px);text-shadow:0 0 24px rgba(255,255,255,.55);text-align:center}
+#g{display:flex;gap:3vw;width:100%;max-width:1100px;justify-content:center;flex-wrap:wrap}
+a.c{flex:1 1 240px;max-width:340px;min-height:min(46vh,340px);border-radius:28px;border:5px solid rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.35);animation:f 3.5s ease-in-out infinite}
+a.c:active{transform:scale(.96)}
+a.c span{font-size:clamp(70px,12vw,130px);line-height:1}
+a.c b{font-size:clamp(24px,3.6vw,38px);text-shadow:0 2px 8px rgba(0,0,0,.4);text-align:center}
+.f{background:linear-gradient(160deg,#7fd3ff,#2a6fd6)}.a{background:linear-gradient(160deg,#ffb347,#c0392b);animation-delay:.6s}.r{background:linear-gradient(160deg,#4fe3c1,#1b6fa8);animation-delay:1.2s}
+@keyframes f{50%{transform:translateY(-10px)}}
+</style></head><body><div id="w"><h1>Pick a Game!</h1><div id="g">
+<a class="c f" href="index.html"><span>&#10052;&#65039;</span><b>Frozen Maze</b></a>
+<a class="c a" href="aladdin.html"><span>&#129684;</span><b>Aladdin Adventure</b></a>
+<a class="c r" href="ariel.html"><span>&#129340;&#8205;&#9792;&#65039;</span><b>Ariel&#8217;s Reef</b></a>
+</div></div>
+<script>let l=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-l<=350)e.preventDefault();l=n},{passive:false});</script></body></html>
